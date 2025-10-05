@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>360° Space Viewer with Extended Info Spots</title>
+  <style>
+    body { margin: 0; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+    #viewer { width: 100%; height: 100vh; }
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      justify-content: center;
+      padding: 20px 0;
+      z-index: 20;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      transform: translateY(-100%);
+      animation: slideDown 1s forwards;
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-100%) scaleY(0.8); opacity: 0; }
+      to { transform: translateY(0) scaleY(1); opacity: 1; }
+    }
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 40px;
+      margin: 0;
+      padding: 0;
+    }
+    nav ul li {
+      position: relative;
+      cursor: pointer;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      transition: all 0.3s ease;
+    }
+    nav ul li::after {
+      content: '';
+      position: absolute;
+      width: 0%;
+      height: 3px;
+      background: #00f7ff;
+      left: 0;
+      bottom: -8px;
+      transition: 0.4s;
+      border-radius: 2px;
+    }
+    nav ul li:hover {
+      color: #00f7ff;
+      transform: scale(1.1);
+    }
+    nav ul li:hover::after {
+      width: 100%;
+    }
+    #infoBox {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 25px;
+      border-radius: 15px;
+      width: 350px;
+      text-align: center;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 10;
+    }
+    #infoBox.show {
+      display: block;
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    #infoBox button {
+      margin-top: 15px;
+      padding: 8px 15px;
+      background: #00f7ff;
+      color: black;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    #infoBox button:hover {
+      background: #00c1d9;
+    }
+    canvas { cursor: grab; }
+    canvas:active { cursor: grabbing; }
+  </style>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li onclick="goTo('Star 1')">Star 1</li>
+      <li onclick="goTo('Star 2')">Star 2</li>
+      <li onclick="goTo('Blue Giant')">Blue Giant</li>
+      <li onclick="goTo('Nebula')">Nebula</li>
+      <li onclick="goTo('Galaxy')">Galaxy</li>
+      <li onclick="goTo('Cluster')">Cluster</li>
+      <li onclick="goTo('Supernova')">Supernova</li>
+    </ul>
+  </nav>
+  <div id="viewer"></div>
+  <div id="infoBox">
+    <h2 id="infoTitle"></h2>
+    <p id="infoDesc"></p>
+    <button onclick="closeInfo()">Close</button>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.105.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/panolens@0.11.0/build/panolens.min.js"></script> 
+  <script>
+    const viewer = new PANOLENS.Viewer({ 
+      container: document.querySelector('#viewer'),
+      autoRotate: true,
+      autoRotateSpeed: 0.2,
+      controlBar: true
+    });
+    const panorama = new PANOLENS.ImagePanorama('space-360.jpg');
+    viewer.add(panorama);
+    const spots = [
+      { name: 'Star 1', pos: [5000, -2000, -2000], info: 'A yellow dwarf star similar to our Sun.' },
+      { name: 'Star 2', pos: [-5000, 1000, -3000], info: 'A massive white giant, extremely luminous.' },
+      { name: 'Blue Giant', pos: [3000, 3000, 2000], info: 'A young blue giant star burning at over 25,000°C.' },
+      { name: 'Nebula', pos: [1000, -3000, 3000], info: 'A nebula of interstellar gas and dust — a stellar nursery.' },
+      { name: 'Galaxy', pos: [0, 0, -5000], info: 'A spiral galaxy filled with billions of stars and dark matter.' },
+      { name: 'Cluster', pos: [-2000, 2000, 2000], info: 'A dense star cluster bound by mutual gravity.' },
+      { name: 'Supernova', pos: [4000, -1000, 4000], info: 'The remnant of a massive star’s violent explosion.' }
+    ];
+    const infospots = {};
+    spots.forEach(s => {
+      const spot = new PANOLENS.Infospot(350, PANOLENS.DataImage.Info);
+      spot.position.set(...s.pos);
+      spot.addEventListener('click', () => showInfo(s.name, s.info));
+      panorama.add(spot);
+      infospots[s.name] = s.pos;
+    });
+    function showInfo(title, desc) {
+      const box = document.getElementById('infoBox');
+      document.getElementById('infoTitle').innerText = title;
+      document.getElementById('infoDesc').innerText = desc;
+      box.style.display = 'block';
+      setTimeout(() => box.classList.add('show'), 10);
+    }
+    function closeInfo() {
+      const box = document.getElementById('infoBox');
+      box.classList.remove('show');
+      setTimeout(() => box.style.display = 'none', 300);
+    }
+    function goTo(name) {
+      const pos = infospots[name];
+      if (pos) viewer.tweenControlCenter(new THREE.Vector3(...pos), 0);
+    }
+  </script>
+</body>
+</html>
